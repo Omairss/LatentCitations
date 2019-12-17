@@ -205,6 +205,21 @@ def get_zips_parallel_reducer(arg):
 
 if __name__ == '__main__':
 
+    """
+
+    This module is written to create the map between the citing article and it's 
+    reference sentences and the cited article.
+    
+    Input: The Nature Dataset of XML Files.
+    Output:
+        - tex_ref_mappings: This file consists of sentences associated with any given citation.
+        - references: A list of jsons with each item consisting of references and refereces details 
+                        in the paper.
+    .
+    
+
+    """
+
 
     #nltk.download('punkt')
     sent_detector = nltk.data.load('tokenizers/punkt/english.pickle')

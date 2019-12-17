@@ -178,7 +178,18 @@ def add_metadata(papers, references):
     return papers
 
 
-if __name__ == '__main__'
+if __name__ == '__main__':
+
+	
+    """
+    
+    This module is written to create the map between the citing article and it's 
+    reference sentences and the cited article. This module then groups together all
+    referring sentences into the paper that they are referring to
+    in order to make the process easier for downstream analysis.
+    
+
+    """
 
     parser = OptionParser()
     
