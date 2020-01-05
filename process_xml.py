@@ -16,6 +16,7 @@ from bs4 import BeautifulSoup
 from tqdm import tqdm
 import nltk.data
 from multiprocessing import Pool
+from optparse import OptionParser
 
 
 def get_reference_mapping(filename, content):
@@ -116,7 +117,7 @@ def get_reference_text(filename, content):
     
     content   = content.decode('UTF-8')
     bibid     = re.findall(r'<bibr\srid=\"(.*?)\"\s*\/>', content)
-    #bibtext   = re.findall(r"\s.*?<bibr\s", content)
+    #bibtext  = re.findall(r"\s.*?<bibr\s", content)
     
     bibtext_intermediate = [s for s in sent_detector.tokenize(content)\
                                if re.search(r'<bibr\srid', s)]
@@ -133,7 +134,6 @@ def get_reference_text(filename, content):
         while text_counter[i] != 0:
             bibtext.append(s)
             text_counter[i] -= 1
-        
     
     assert(len(bibid) == len(bibtext)), "The bibid's and preceeding text don't match: " +\
                                         "for article %s\n" % filename +\
@@ -141,8 +141,16 @@ def get_reference_text(filename, content):
                                         "bibtext: %s\n" %bibtext
     
     with open('data/intermediate/tex_ref_mappings/%s' % (filename + '.json'), 'w') as f:
-        f.write(json.dumps([{i[1]:i[0].split(' ')} for i in zip(bibid, bibtext)]))
-    
+
+        #Only write sentences with 1 reference if MULTI_REF flag is on.
+
+        if MULTI_REF:
+            f.write(json.dumps([{i[1]:i[0].split(' ')} for i in zip(bibid, bibtext)]))
+           
+        else:
+            f.write(json.dumps([{i[1]:i[0].split(' ')} for i in zip(bibid, bibtext) \
+                                                            if len(i[0].split(' ')) == 1]))
+        
     return 
 
 
@@ -215,8 +223,6 @@ if __name__ == '__main__':
         - tex_ref_mappings: This file consists of sentences associated with any given citation.
         - references: A list of jsons with each item consisting of references and refereces details 
                         in the paper.
-    .
-    
 
     """
 
@@ -224,18 +230,46 @@ if __name__ == '__main__':
     #nltk.download('punkt')
     sent_detector = nltk.data.load('tokenizers/punkt/english.pickle')
     directory     = 'data/nature/raw xml/'
-    global DEBUG
-    DEBUG = True
+
+
+    parser = OptionParser()
+    
+    parser.add_option("-m", "--include_multi_ref",
+                        action="store_true", dest="include_multi_ref",
+                         default = True, help = 'Include text that maps to multiple references')
+
+    parser.add_option("-t", "--test",
+                        action = "store_true", dest="test",
+                        default = False, help = 'Run on first 100 files only')
+
+    parser.add_option("-v", "--verbose",
+                        action = "store_true", dest="verbose",
+                        default = False, help = 'Print failures and other debug info')
+
+    (options, args) = parser.parse_args()
+
+    global DEBUG, MULTI_REF
+    
+    DEBUG = options.verbose
+    MULTI_REF = options.include_multi_ref
+
+    print(MULTI_REF)
 
     print('Reading Files..')
     finfos, contents = get_zips_parallel_mapper(directory)
     p                = Pool(6)
     
     print('Processing in parallel..')
+    if options.test: 
+        print ('Warning: Test is ON')
+        finfos = finfos[:100]
+        contents = contents[:100]
+
+
     success          = p.map(get_zips_parallel_reducer, zip(finfos, contents))
-    success_rate       = sum([1 if i == True else 0 for i in success])/len(success)
+    success_rate      = sum([1 if i == True else 0 for i in success])/len(success)
     
     print ('%f of all processed files Succeeded' % success_rate)
 
-    if success_rate < 0.8:
-        print(success)
+    #if success_rate < 0.8:
+    #    print(success)
